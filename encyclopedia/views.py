@@ -1,13 +1,20 @@
 from django.shortcuts import render
+from django.urls import reverse
+from django.http import HttpResponseRedirect
 import markdown2
 
 from . import util
 
 
 def index(request):
-    return render(request, "encyclopedia/index.html", {
-        "entries": util.list_entries()
-    })
+    if 'q' in request.GET:
+        query = request.GET['q']
+        if query in util.list_entries():
+            return HttpResponseRedirect(f'wiki/{query}')
+    else:
+        return render(request, "encyclopedia/index.html", {
+            "entries": util.list_entries()
+        })
 
 def entry(request, entry_title):
     if entry_title in util.list_entries():
