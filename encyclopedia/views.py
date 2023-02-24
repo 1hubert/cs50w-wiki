@@ -9,8 +9,9 @@ from . import util
 def index(request):
     if 'q' in request.GET:
         query = request.GET['q']
-        if query in util.list_entries():
-            return HttpResponseRedirect(f'wiki/{query}')
+        for entry in util.list_entries():
+            if entry.lower() == query.lower():
+                return HttpResponseRedirect(f'wiki/{entry}')
     else:
         return render(request, "encyclopedia/index.html", {
             "entries": util.list_entries()
