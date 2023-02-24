@@ -9,40 +9,19 @@ from django.http import HttpResponseRedirect
 import markdown2
 from django.db import models
 from django.views.generic.edit import FormView
+from django.views.generic.edit import UpdateView
 
 from . import util
 from .models import Entry
 
 
-class NewEntryForm(ModelForm):
-    def clean(self):
-        cleaned_data = super().clean()
-        entry_title = cleaned_data.get("entry_title")
-        entry_content = cleaned_data.get("entry_content")
-        
-        if entry_title in util.list_entries():
-            raise ValidationError("Entry already exists in the wiki")
-        
-        return cleaned_data
-        
-    class Meta:
-        model = Entry
-        fields = ["entry_title", "entry_content"]
+class NewEntryForm(forms.Form):
+    entry_title = forms.CharField(label="Entry Title", required=True, widget=forms.TextInput)
+    entry_content = forms.CharField(label="Content: ", required=True, widget= forms.Textarea)
 
-class NewEntryFormView(FormView):
-    form_class = NewEntryForm
-    success_url = '/'
-    template_name = 'encyclopedia/new.html'
-    def form_valid(self, form):
-        entry_title = form.cleaned_data["entry_title"]
-        entry_content = form.cleaned_data["entry_content"]
-        os.chdir('entries')
-        with open(f"{entry_title}.md","w+") as f:
-            f.write(entry_content)
-        os.chdir('..')
-        
-        return HttpResponseRedirect(self.success_url)
-
+class EditEntryForm(forms.Form):
+    entry_content = forms.CharField(label="Content: ", widget=forms.Textarea)
+    
 def index(request):
     if 'q' in request.GET:
         query = request.GET['q']
@@ -80,10 +59,22 @@ def new(request):
         form = NewEntryForm(request.POST)
 
         if form.is_valid():
-            #entry_title = form.cleaned_data["entry_title"]
-            #entry_content = form.cleaned_data["entry_content"]
                 
-            return HttpResponseRedirect('')
+            entry_title = form.cleaned_data["entry_title"]
+            entry_content = form.cleaned_data["entry_content"]
+
+
+            all_entries = util.list_entries()
+            for filename in all_entries:
+                if entry_title.lower()== filename.lower():
+                    error_message="Page exists with the title '%s'. \n please try again with different title!" %filename
+                    return render(request, "encyclopedia/new.html",{
+                        "form":form,
+                        "error":error_message
+                    })
+
+            util.save_entry(entry_title, entry_content)
+            return HttpResponseRedirect(reverse('encyclopedia:index') + f'wiki/{entry_title}')
         else:
             return render(request, "encyclopedia/new.html", {
                 "form": form
@@ -96,3 +87,28 @@ def new(request):
 def rand(request):
     choice = random.choice(util.list_entries())
     return HttpResponseRedirect(reverse('encyclopedia:index') + f'wiki/{choice}')
+
+def edit(request, entry_title):
+    entry_content = util.get_entry(entry_title)
+    form = EditEntryForm(initial={
+        "entry_content": entry_content
+    })
+    if request.method == 'POST':
+        form = EditEntryForm(request.POST, initial={
+            "entry_content": entry_content
+        })
+        if form.is_valid():
+            entry_content = form.cleaned_data["entry_content"]
+
+            util.save_entry(entry_title, entry_content)
+            return HttpResponseRedirect(reverse('encyclopedia:index') + f'wiki/{entry_title}')
+        else:
+            return render(request, "encyclopedia/edit.html", {
+                "form": form,
+                "entry_title": entry_title
+            })
+    else:
+        return render(request, "encyclopedia/edit.html", {
+            "form": form,
+            "entry_title": entry_title
+        })
