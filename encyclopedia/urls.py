@@ -9,4 +9,5 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("new/", views.new, name="new"),
     path("random/", views.rand, name="rand"),
+    path("search/", views.search, name="search")
 ]

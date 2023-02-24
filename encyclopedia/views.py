@@ -23,25 +23,9 @@ class EditEntryForm(forms.Form):
     entry_content = forms.CharField(label="Content: ", widget=forms.Textarea)
     
 def index(request):
-    if 'q' in request.GET:
-        query = request.GET['q']
-        for entry in util.list_entries():
-            if entry.lower() == query.lower():
-                return HttpResponseRedirect(f'wiki/{entry}')
-        
-        # No exact match
-        results = []
-        for entry in util.list_entries():
-            if query.lower() in entry.lower():
-                results.append(entry)
-        return render(request, "encyclopedia/search_results.html", {
-            "results": results,
-            "query": query
-        })
-    else:
-        return render(request, "encyclopedia/index.html", {
-            "entries": util.list_entries()
-        })
+    return render(request, "encyclopedia/index.html", {
+        "entries": util.list_entries()
+    })
 
 def entry(request, entry_title):
     if entry_title in util.list_entries():
@@ -112,3 +96,19 @@ def edit(request, entry_title):
             "form": form,
             "entry_title": entry_title
         })
+        
+def search(request):
+    query = request.GET['q']
+    for entry in util.list_entries():
+        if entry.lower() == query.lower():
+            return HttpResponseRedirect(reverse('encyclopedia:index') + f'wiki/{entry}')
+    
+    # No exact match
+    results = []
+    for entry in util.list_entries():
+        if query.lower() in entry.lower():
+            results.append(entry)
+    return render(request, "encyclopedia/search_results.html", {
+        "results": results,
+        "query": query
+    })
