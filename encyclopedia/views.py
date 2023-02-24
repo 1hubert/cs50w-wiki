@@ -1,4 +1,5 @@
 import os
+import random
 
 from django import forms
 from django.shortcuts import render
@@ -91,3 +92,7 @@ def new(request):
     return render(request, "encyclopedia/new.html", {
         "form": NewEntryForm()
     })
+    
+def rand(request):
+    choice = random.choice(util.list_entries())
+    return HttpResponseRedirect(reverse('encyclopedia:index') + f'wiki/{choice}')
